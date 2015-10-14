@@ -464,6 +464,9 @@ function makeQueueEntry(item, addbtns) {
     if(item.temp) {
         li.addClass("queue_temp");
     }
+	if(item.leadsong) {
+		li.addClass("queue_leadsong");
+	}
 
     if(addbtns)
         addQueueButtons(li);

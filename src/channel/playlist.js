@@ -62,6 +62,7 @@ function PlaylistItem(media, opts) {
     this.queueby = (typeof opts.queueby === "string") ? opts.queueby : "";
     this.next = null;
     this.prev = null;
+	this.leadsong = Boolean(opts.leadsong);
 }
 
 PlaylistItem.prototype = {
@@ -70,7 +71,8 @@ PlaylistItem.prototype = {
             media: this.media.pack(),
             uid: this.uid,
             temp: this.temp,
-            queueby: this.queueby
+            queueby: this.queueby,
+			leadsong: this.leadsong
         };
     }
 };
@@ -126,7 +128,8 @@ PlaylistModule.prototype.load = function (data) {
         var newitem = new PlaylistItem(m, {
             uid: self._nextuid++,
             temp: item.temp,
-            queueby: item.queueby
+            queueby: item.queueby,
+			leadsong: item.leadsong
         });
 
         self.items.append(newitem);
@@ -317,6 +320,8 @@ PlaylistModule.prototype.handleQueue = function (user, data) {
         return;
     }
 
+    var self = this;
+
     var id = data.id;
     var type = data.type;
 
@@ -373,6 +378,18 @@ PlaylistModule.prototype.handleQueue = function (user, data) {
     var temp = data.temp || !perms.canAddNonTemp(user);
     var queueby = user.getName();
 
+	var leadsong = false;
+
+	if (this.leader !== null) {
+		if (queueby == this.leader.account.name) {
+			leadsong = true;
+		}
+	}
+
+	// var rutil = require('util');
+	// rutil.log(rutil.inspect(data));
+	// rutil.log(rutil.inspect(this));
+
     var duration = undefined;
     /**
      * Duration can optionally be specified for a livestream.
@@ -420,7 +437,8 @@ PlaylistModule.prototype.handleQueue = function (user, data) {
         shouldAddToLibrary: !temp,
         queueby: queueby,
         duration: duration,
-        maxlength: maxlength
+        maxlength: maxlength,
+		leadsong: leadsong
     };
 
     if (data.type === "yp") {
@@ -692,7 +710,8 @@ PlaylistModule.prototype.handleShuffle = function (user) {
         var item = new PlaylistItem(pl[i].media, {
             uid: this._nextuid++,
             temp: pl[i].temp,
-            queueby: pl[i].queueby
+            queueby: pl[i].queueby,
+			leadsong: pl[i].leadsong
         });
 
         this.items.append(item);
@@ -929,7 +948,8 @@ PlaylistModule.prototype._addItem = function (media, data, user, cb) {
     var item = new PlaylistItem(media, {
         uid: self._nextuid++,
         temp: data.temp,
-        queueby: data.queueby
+        queueby: data.queueby,
+		leadsong: data.leadsong
     });
 
     if (data.title && (media.type === "cu" || media.type === "fi")) {
@@ -946,8 +966,14 @@ PlaylistModule.prototype._addItem = function (media, data, user, cb) {
         self.meta.rawTime += media.seconds;
         self.meta.time = util.formatTime(self.meta.rawTime);
         var m = item.media;
+
+		var addtype = "song";
+		if (data.leadsong) {
+			addtype = "leadsong";
+		}
+			
         self.channel.logger.log("[playlist] " + (data.queueby || "(anonymous)") +
-            " added " + m.title + " (" + m.type + ":" + m.id + ")");
+            " added " + addtype + " " + m.title + " (" + m.type + ":" + m.id + ")");
 
         var perms = self.channel.modules.permissions;
         self.channel.users.forEach(function (u) {
