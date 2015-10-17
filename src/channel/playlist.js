@@ -764,7 +764,22 @@ PlaylistModule.prototype.handleAssignLeader = function (user, data) {
     }
 
     if (!name) {
-        this.resumeAutolead();
+        this.channel.broadcastAll("setLeader", "");
+
+        this.channel.logger.log("[playlist] Resuming autolead");
+        if (this.current !== null) {
+            // Ensure the video is unpaused before resuming autolead.
+            // In the past, people have reported stuck playlists because
+            // they assigned leader, paused, then removed leader.
+            this.current.media.paused = false;
+            this.sendMediaUpdate(this.channel.users);
+
+            if (!this._leadInterval && this.current.media.seconds > 0) {
+                this._lastUpdate = Date.now();
+                this._leadInterval = setInterval(this._leadLoop.bind(this), 1000);
+                this._leadLoop();
+            }
+        }
         return;
     }
 
